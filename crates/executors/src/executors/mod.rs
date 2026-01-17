@@ -38,6 +38,7 @@ pub mod opencode;
 #[cfg(feature = "qa-mode")]
 pub mod qa_mock;
 pub mod qwen;
+pub mod codebuddy;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]

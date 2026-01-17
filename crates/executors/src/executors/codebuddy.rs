@@ -19,7 +19,7 @@ use crate::{
 
 #[derive(Derivative, Clone, Serialize, Deserialize, TS, JsonSchema)]
 #[derivative(Debug, PartialEq)]
-pub struct QwenCode {
+pub struct CodeBuddy {
     #[serde(default)]
     pub append_prompt: AppendPrompt,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -32,9 +32,9 @@ pub struct QwenCode {
     pub approvals: Option<Arc<dyn ExecutorApprovalService>>,
 }
 
-impl QwenCode {
+impl CodeBuddy {
     fn build_command_builder(&self) -> Result<CommandBuilder, CommandBuildError> {
-        let mut builder = CommandBuilder::new("npx -y @qwen-code/qwen-code@latest");
+        let mut builder = CommandBuilder::new("npx -y @tencent-ai/codebuddy-code");
 
         if self.yolo.unwrap_or(false) {
             builder = builder.extend_params(["--yolo"]);
@@ -45,7 +45,7 @@ impl QwenCode {
 }
 
 #[async_trait]
-impl StandardCodingAgentExecutor for QwenCode {
+impl StandardCodingAgentExecutor for CodeBuddy {
     fn use_approvals(&mut self, approvals: Arc<dyn ExecutorApprovalService>) {
         self.approvals = Some(approvals);
     }
@@ -56,9 +56,9 @@ impl StandardCodingAgentExecutor for QwenCode {
         prompt: &str,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        let qwen_command = self.build_command_builder()?.build_initial()?;
+        let codebuddy_command = self.build_command_builder()?.build_initial()?;
         let combined_prompt = self.append_prompt.combine_prompt(prompt);
-        let harness = AcpAgentHarness::with_session_namespace("qwen_sessions");
+        let harness = AcpAgentHarness::with_session_namespace("codebuddy_sessions");
         let approvals = if self.yolo.unwrap_or(false) {
             None
         } else {
@@ -68,7 +68,7 @@ impl StandardCodingAgentExecutor for QwenCode {
             .spawn_with_command(
                 current_dir,
                 combined_prompt,
-                qwen_command,
+                codebuddy_command,
                 env,
                 &self.cmd,
                 approvals,
@@ -83,9 +83,9 @@ impl StandardCodingAgentExecutor for QwenCode {
         session_id: &str,
         env: &ExecutionEnv,
     ) -> Result<SpawnedChild, ExecutorError> {
-        let qwen_command = self.build_command_builder()?.build_follow_up(&[])?;
+        let codebuddy_command = self.build_command_builder()?.build_follow_up(&[])?;
         let combined_prompt = self.append_prompt.combine_prompt(prompt);
-        let harness = AcpAgentHarness::with_session_namespace("qwen_sessions");
+        let harness = AcpAgentHarness::with_session_namespace("codebuddy_sessions");
         let approvals = if self.yolo.unwrap_or(false) {
             None
         } else {
@@ -96,7 +96,7 @@ impl StandardCodingAgentExecutor for QwenCode {
                 current_dir,
                 combined_prompt,
                 session_id,
-                qwen_command,
+                codebuddy_command,
                 env,
                 &self.cmd,
                 approvals,
@@ -110,7 +110,7 @@ impl StandardCodingAgentExecutor for QwenCode {
 
     // MCP configuration methods
     fn default_mcp_config_path(&self) -> Option<std::path::PathBuf> {
-        dirs::home_dir().map(|home| home.join(".qwen").join("settings.json"))
+        dirs::home_dir().map(|home| home.join(".codebuddy").join("mcp.json"))
     }
 
     fn get_availability_info(&self) -> AvailabilityInfo {
@@ -120,7 +120,7 @@ impl StandardCodingAgentExecutor for QwenCode {
             .unwrap_or(false);
 
         let installation_indicator_found = dirs::home_dir()
-            .map(|home| home.join(".qwen").join("installation_id").exists())
+            .map(|home| home.join(".codebuddy").join("config.json").exists())
             .unwrap_or(false);
 
         if mcp_config_found || installation_indicator_found {
