@@ -48,7 +48,7 @@ pub struct Opencode {
 
 impl Opencode {
     fn build_command_builder(&self) -> Result<CommandBuilder, CommandBuildError> {
-        let builder = CommandBuilder::new("npx -y opencode-ai@1.1.3")
+        let builder = CommandBuilder::new("npx -y opencode-ai")
             // Pass hostname/port as separate args so OpenCode treats them as explicitly set
             // (it checks `process.argv.includes(\"--port\")` / `\"--hostname\"`).
             .extend_params(["serve", "--hostname", "127.0.0.1", "--port", "0"]);
@@ -221,13 +221,42 @@ impl StandardCodingAgentExecutor for Opencode {
     }
 
     fn default_mcp_config_path(&self) -> Option<std::path::PathBuf> {
+       // Try multiple config file names (.json and .jsonc) in XDG/platform config dirs
         #[cfg(unix)]
         {
-            xdg::BaseDirectories::with_prefix("opencode").get_config_file("opencode.json")
+            let base_dirs = xdg::BaseDirectories::with_prefix("opencode");
+            // First try opencode.json, then opencode.jsonc
+            base_dirs
+                .get_config_file("opencode.json")
+                .filter(|p| p.exists())
+                .or_else(|| base_dirs.get_config_file("opencode.jsonc"))
         }
         #[cfg(not(unix))]
         {
-            dirs::config_dir().map(|config| config.join("opencode").join("opencode.json"))
+            dirs::config_dir().and_then(|config| {
+                let opencode_dir = config.join("opencode");
+                let json_path = opencode_dir.join("opencode.json");
+                let jsonc_path = opencode_dir.join("opencode.jsonc");
+                if json_path.exists() {
+                    Some(json_path)
+                } else if jsonc_path.exists() {
+                    Some(jsonc_path)
+                } else {
+                    None
+                }
+            }).or_else(|| 
+                dirs::home_dir().and_then(|home| {
+                    let opencode_dir = home.join(".config").join("opencode");
+                    let json_path = opencode_dir.join("opencode.json");
+                    let jsonc_path = opencode_dir.join("opencode.jsonc");
+                    tracing::info!("Checking {} and {}", json_path.display(), jsonc_path.display());
+                    if json_path.exists() {
+                        Some(json_path)
+                    } else {
+                        Some(jsonc_path)
+                    }
+                })
+            )
         }
     }
 

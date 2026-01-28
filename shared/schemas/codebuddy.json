@@ -12,13 +12,13 @@
       "default": null
     },
     "yolo": {
-      "title": "Yolo Mode",
-      "description": "Skip some safety checks when executing commands",
+      "title": "YOLO Mode",
+      "description": "Enable YOLO mode (skip some safety checks)",
       "type": [
         "boolean",
         "null"
       ],
-      "default": null
+      "default": false
     },
     "base_command_override": {
       "title": "Base Command Override",
